@@ -15,8 +15,8 @@ Serveral features have been added to the original snake game. Including
 | Collectable | Score | Status | Description                                                                         | Thumbnails |
 |-------------|-------|--------|-------------------------------------------------------------------------------------|------------|
 | Food        | 10    |        | The length of the snake increases by 1                                              |   ![test](./docs/food.png)         |
-| Marijuana   | 50    | Crazy  | The speed decreases by half in 10 seconds                                           |    ![test](./docs/marijuana.png)          |
-| Coffee      | 0     | Chill  | The length of the snake increases by 5, its speed increases by 2 times in 5 seconds |     ![test](./docs/coffe.png)        |
+| Marijuana   | 50    | Crazy  |      The length of the snake increases by 5, its speed increases by 2 times in 5 seconds    |    ![test](./docs/marijuana.png)          |
+| Coffee      | 0     | Chill  |  The speed decreases by half in 10 seconds   |     ![test](./docs/coffe.png)        |
 
 
 ## Dependencies for Running Locally
