@@ -1,7 +1,7 @@
-#include "controller.h"
+#include <SDL.h>
 #include <iostream>
-#include "SDL.h"
-#include "snake.h"
+
+#include "controller.h"
 
 void Controller::ChangeDirection(Snake &snake, Snake::Direction input,
                                  Snake::Direction opposite) const {

@@ -1,13 +1,18 @@
-#include "game.h"
+
+#include <SDL.h>
+#include <condition_variable>
+#include <future>
 #include <iostream>
-#include "SDL.h"
+#include <thread>
+
+#include "game.h"
 
 Game::Game(std::size_t grid_width, std::size_t grid_height)
-    : snake(grid_width, grid_height),
-      engine(dev()),
-      random_w(0, static_cast<int>(grid_width)),
-      random_h(0, static_cast<int>(grid_height)) {
-  PlaceFood();
+    : snake(grid_width, grid_height), engine(dev()),
+      random_w(0, static_cast<int>(grid_width) - 1),
+      random_h(0, static_cast<int>(grid_height) - 1),
+      coolDown(5.0, {128, 128, 128, 128}) {
+  PlaceCollectableRandomly(CollectableType::Food);
 }
 
 void Game::Run(Controller const &controller, Renderer &renderer,
@@ -19,13 +24,28 @@ void Game::Run(Controller const &controller, Renderer &renderer,
   int frame_count = 0;
   bool running = true;
 
+  shouldStopSpawn = false;
+
+  std::thread spawnCollectables = std::thread([&]() {
+    while (not shouldStopSpawn) {
+      std::unique_lock<std::mutex> lck(mutex);
+
+      auto type = static_cast<CollectableType>(rand() % 2);
+
+      PlaceCollectableRandomly(type);
+
+      cv.wait_for(lck, std::chrono::seconds(10),
+                  [&]() { return shouldStopSpawn == true; });
+    }
+  });
+
   while (running) {
     frame_start = SDL_GetTicks();
 
     // Input, Update, Render - the main game loop.
     controller.HandleInput(running, snake);
     Update();
-    renderer.Render(snake, food);
+    renderer.Render(snake, collectables, coolDown);
 
     frame_end = SDL_GetTicks();
 
@@ -48,9 +68,82 @@ void Game::Run(Controller const &controller, Renderer &renderer,
       SDL_Delay(target_frame_duration - frame_duration);
     }
   }
+
+  std::unique_lock<std::mutex> lck(mutex);
+  shouldStopSpawn = true;
+  lck.unlock();
+  cv.notify_all();
+
+  spawnCollectables.join();
 }
 
-void Game::PlaceFood() {
+void Game::PlaceCollectableRandomly(CollectableType type) {
+  collectables.emplace_back(GetRandomNonSnakePos(), type);
+}
+
+CollectableIter Game::CheckIsThereCollect(const SnakeGamePos &pos) {
+  for (auto it = collectables.begin(); it != collectables.end(); ++it) {
+    if (it->GetPos().x == pos.x and it->GetPos().y == pos.y)
+      return it;
+  }
+  return collectables.end();
+}
+
+void Game::Update() {
+  if (!snake.alive)
+    return;
+
+  snake.type = coolDown.GetType();
+  snake.Update();
+  coolDown.Update();
+  for (auto &c : collectables) {
+    c.Update();
+  }
+
+  int new_x = static_cast<int>(snake.head_x);
+  int new_y = static_cast<int>(snake.head_y);
+
+  // Check if there any collectables over here
+  auto it = CheckIsThereCollect({new_x, new_y});
+  if (it != collectables.end()) {
+
+    std::unique_lock<std::mutex> lck(mutex);
+    auto collectable = std::move(*it);
+    auto type = collectable.GetType();
+    collectables.erase(it);
+    lck.unlock();
+
+    if (type == CollectableType::Alcohol) {
+      coolDown.StartCountDown(10.0f * 60, Drunk);
+
+    } else if (type == CollectableType::Coffee) {
+      // get a coffee to cool down
+      coolDown.StartCountDown(10.0f * 60, Chill);
+    } else if (type == CollectableType::Coin) {
+
+    } else if (type == CollectableType::Marijuana) {
+      coolDown.StartCountDown(10.0f * 60, Poisoned);
+      for (int i = 0; i < 5; ++ i) {
+        snake.GrowBody(1);
+        snake.speed += 0.02;
+        score += 10;
+      }
+    } else if (type == CollectableType::Food) {
+      // Grow snake and increase speed.
+      snake.GrowBody(1);
+      snake.speed += 0.02;
+      score += 10;
+      PlaceCollectableRandomly(CollectableType::Food);
+    }
+  }
+}
+
+int Game::GetScore() const { return score; }
+int Game::GetSize() const { return snake.size; }
+
+Game::~Game() {}
+
+SnakeGamePos Game::GetRandomNonSnakePos() {
   int x, y;
   while (true) {
     x = random_w(engine);
@@ -58,30 +151,7 @@ void Game::PlaceFood() {
     // Check that the location is not occupied by a snake item before placing
     // food.
     if (!snake.SnakeCell(x, y)) {
-      food.x = x;
-      food.y = y;
-      return;
+      return {x, y};
     }
   }
 }
-
-void Game::Update() {
-  if (!snake.alive) return;
-
-  snake.Update();
-
-  int new_x = static_cast<int>(snake.head_x);
-  int new_y = static_cast<int>(snake.head_y);
-
-  // Check if there's food over here
-  if (food.x == new_x && food.y == new_y) {
-    score++;
-    PlaceFood();
-    // Grow snake and increase speed.
-    snake.GrowBody();
-    snake.speed += 0.02;
-  }
-}
-
-int Game::GetScore() const { return score; }
-int Game::GetSize() const { return snake.size; }
