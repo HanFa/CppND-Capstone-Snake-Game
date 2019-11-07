@@ -133,6 +133,7 @@ void Game::Update() {
       snake.GrowBody(1);
       snake.speed += 0.02;
       score += 10;
+      std::unique_lock<std::mutex> lck(mutex);
       PlaceCollectableRandomly(CollectableType::Food);
     }
   }

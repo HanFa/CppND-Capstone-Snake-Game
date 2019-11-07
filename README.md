@@ -19,6 +19,28 @@ Serveral features have been added to the original snake game. Including
 | Coffee      | 0     | Chill  |  The speed decreases by half in 10 seconds   |     ![test](./docs/coffe.png)        |
 
 
+## Files and Classes Structures
+
+![SnakeGameClasses](./docs/SnakeGameClasses.png)
+
+Expected behavior: the cool down bar presented whenever the snake eats a non-food collectable, with corresponding effect on the score and the speed.
+
+## Rubrics
+* The project uses Object Oriented Programming techniques.
+* Classes use appropriate access specifiers for class members.
+* Class constructors utilize member initialization lists. (collectable.cpp:9, cooldown:13)
+* Classes abstract implementation details from their interfaces. 
+(food, marijuana, coffee, cooldown bar and the snake are inheritance from an interface class, renderable)
+
+* Classes encapsulate behavior. 
+* Classes follow an appropriate inheritance hierarchy.
+* Derived class functions override virtual base class functions. (Collectable cooldown and snake overrides different RENDER method to render differently, renderable.h:13)
+* The project makes use of references in function declarations. (game.h:24 Run() function takes in references to the controller and renderer)
+* The project uses multithreading. (a concurrent thread responsible for spawning non-food collectable aysncronously game.cpp:29)
+* Mutex and CV are used to protect collectables (ie. std::vector<Collectable> should be protected when adding and removing elements)
+
+
+
 ## Dependencies for Running Locally
 * cmake >= 3.7
   * All OSes: [click here for installation instructions](https://cmake.org/install/)
